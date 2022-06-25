@@ -15,10 +15,12 @@ public class WindowsData extends AMITypeData {
     private final boolean useHTTPS;
     private final String bootDelay;
     private final boolean specifyPassword;
+
+    private final boolean useSSH;
     private final Boolean allowSelfSignedCertificate; //Boolean to allow nulls when the saved template doesn't have the field
 
     @DataBoundConstructor
-    public WindowsData(String password, boolean useHTTPS, String bootDelay, boolean  specifyPassword, boolean allowSelfSignedCertificate) {
+    public WindowsData(String password, boolean useHTTPS, String bootDelay, boolean  specifyPassword, boolean allowSelfSignedCertificate, boolean useSSH) {
         this.password = Secret.fromString(password);
         this.useHTTPS = useHTTPS;
         this.bootDelay = bootDelay;
@@ -29,11 +31,13 @@ public class WindowsData extends AMITypeData {
         this.specifyPassword = specifyPassword;
 
         this.allowSelfSignedCertificate = allowSelfSignedCertificate;
+
+        this.useSSH = useSSH;
     }
     
     @Deprecated
     public WindowsData(String password, boolean useHTTPS, String bootDelay, boolean  specifyPassword) {
-        this(password, useHTTPS, bootDelay, specifyPassword, true);
+        this(password, useHTTPS, bootDelay, specifyPassword, true, false);
     }
 
     public WindowsData(String password, boolean useHTTPS, String bootDelay) {
@@ -82,6 +86,10 @@ public class WindowsData extends AMITypeData {
     public boolean isAllowSelfSignedCertificate(){
         return allowSelfSignedCertificate == null || allowSelfSignedCertificate;
     }
+
+    public boolean isUseSSH() {
+        return useSSH;
+    }
     
     @Extension
     public static class DescriptorImpl extends Descriptor<AMITypeData> {
@@ -93,7 +101,7 @@ public class WindowsData extends AMITypeData {
 
     @Override
     public int hashCode() {
-        return Objects.hash(password,useHTTPS, bootDelay, specifyPassword);
+        return Objects.hash(password,useHTTPS, bootDelay, specifyPassword, useSSH);
     }
 
     @Override
@@ -120,6 +128,6 @@ public class WindowsData extends AMITypeData {
                 return false;
         } else if (!allowSelfSignedCertificate.equals(other.allowSelfSignedCertificate))
             return false;
-        return useHTTPS == other.useHTTPS && specifyPassword == other.specifyPassword;
+        return useHTTPS == other.useHTTPS && specifyPassword == other.specifyPassword && useSSH == other.useSSH;
     }
 }
