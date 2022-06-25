@@ -193,13 +193,14 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
             conn.exec("mkdir -p " + tmpDir, logger);
 
             if (initScript != null && initScript.trim().length() > 0
-                    && conn.exec("test -e ~/.hudson-run-init", logger) != 0) {
+                    // TODO: double check if calling Test-Path will have the same effect as "test" on Linux.
+                    && conn.exec("Test-Path -Path .jenkins-init -PathType Leaf", logger) != 0) {
                 logInfo(computer, listener, "Executing init script");
-                scp.put(initScript.getBytes("UTF-8"), "init.sh", tmpDir, "0700");
+                scp.put(initScript.getBytes("UTF-8"), "init.bat", tmpDir, "0700");
                 Session sess = conn.openSession();
                 sess.requestDumbPTY(); // so that the remote side bundles stdout
                 // and stderr
-                sess.execCommand(buildUpCommand(computer, tmpDir + "/init.sh"));
+                sess.execCommand(buildUpCommand(computer, "cmd /c " + tmpDir + "init.bat"));
 
                 sess.getStdin().close(); // nothing to write here
                 sess.getStderr().close(); // we are not supposed to get anything
@@ -213,13 +214,13 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
                 }
                 sess.close();
 
-                logInfo(computer, listener, "Creating ~/.hudson-run-init");
+                logInfo(computer, listener, "Creating ~/.jenkins-init");
 
                 // Needs a tty to run sudo.
                 sess = conn.openSession();
                 sess.requestDumbPTY(); // so that the remote side bundles stdout
                 // and stderr
-                sess.execCommand(buildUpCommand(computer, "touch ~/.hudson-run-init"));
+                sess.execCommand(buildUpCommand(computer, "copy nul ~/.jenkins-init"));
 
                 sess.getStdin().close(); // nothing to write here
                 sess.getStderr().close(); // we are not supposed to get anything
@@ -234,8 +235,8 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
                 sess.close();
             }
 
-            // TODO: parse the version number. maven-enforcer-plugin might help
-            executeRemote(computer, conn, "java -fullversion", "sudo yum install -y java-1.8.0-openjdk.x86_64", logger, listener);
+            // For Windows, we assume Java is already installed in the instance
+            //executeRemote(computer, conn, "java -fullversion", "sudo yum install -y java-1.8.0-openjdk.x86_64", logger, listener);
             executeRemote(computer, conn, "which scp", "sudo yum install -y openssh-clients", logger, listener);
 
             // Always copy so we get the most recent remoting.jar
@@ -247,7 +248,7 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
             final String suffix = computer.getSlaveCommandSuffix();
             final String remoteFS = node.getRemoteFS();
             final String workDir = Util.fixEmptyAndTrim(remoteFS) != null ? remoteFS : tmpDir;
-            String launchString = prefix + " java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "/remoting.jar -workDir " + workDir + suffix;
+            String launchString = prefix + " java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "\\remoting.jar -workDir " + workDir + suffix;
             // launchString = launchString.trim();
 
             if (template.isConnectBySSHProcess()) {
