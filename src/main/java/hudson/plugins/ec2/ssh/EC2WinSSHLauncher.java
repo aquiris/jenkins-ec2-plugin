@@ -187,7 +187,7 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
 
             SCPClient scp = conn.createSCPClient();
             String initScript = node.initScript;
-            String tmpDir = (Util.fixEmptyAndTrim(node.tmpDir) != null ? node.tmpDir : "/tmp");
+            String tmpDir = (Util.fixEmptyAndTrim(node.tmpDir) != null ? node.tmpDir : "\\tmp");
 
             logInfo(computer, listener, "Creating tmp directory (" + tmpDir + ") if it does not exist");
             conn.exec("mkdir -p " + tmpDir, logger);
@@ -214,13 +214,13 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
                 }
                 sess.close();
 
-                logInfo(computer, listener, "Creating ~/.jenkins-init");
+                logInfo(computer, listener, "Creating .jenkins-init");
 
                 // Needs a tty to run sudo.
                 sess = conn.openSession();
                 sess.requestDumbPTY(); // so that the remote side bundles stdout
                 // and stderr
-                sess.execCommand(buildUpCommand(computer, "copy nul ~/.jenkins-init"));
+                sess.execCommand(buildUpCommand(computer, "New-Item -ItemType File -Path ~/.jenkins-init"));
 
                 sess.getStdin().close(); // nothing to write here
                 sess.getStderr().close(); // we are not supposed to get anything
@@ -235,10 +235,6 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
                 sess.close();
             }
 
-            // For Windows, we assume Java is already installed in the instance
-            //executeRemote(computer, conn, "java -fullversion", "sudo yum install -y java-1.8.0-openjdk.x86_64", logger, listener);
-            executeRemote(computer, conn, "which scp", "sudo yum install -y openssh-clients", logger, listener);
-
             // Always copy so we get the most recent remoting.jar
             logInfo(computer, listener, "Copying remoting.jar to: " + tmpDir);
             scp.put(Jenkins.get().getJnlpJars("remoting.jar").readFully(), "remoting.jar", tmpDir);
@@ -248,7 +244,7 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
             final String suffix = computer.getSlaveCommandSuffix();
             final String remoteFS = node.getRemoteFS();
             final String workDir = Util.fixEmptyAndTrim(remoteFS) != null ? remoteFS : tmpDir;
-            String launchString = prefix + " java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "\\remoting.jar -workDir " + workDir + suffix;
+            String launchString = prefix + " java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "/remoting.jar -workDir " + workDir + suffix;
             // launchString = launchString.trim();
 
             if (template.isConnectBySSHProcess()) {
