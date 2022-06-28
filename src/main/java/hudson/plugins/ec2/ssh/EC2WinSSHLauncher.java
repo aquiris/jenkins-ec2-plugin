@@ -79,7 +79,6 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
 
     private static int bootstrapAuthSleepMs = 30000;
     private static int bootstrapAuthTries = 30;
-
     private static int readinessSleepMs = 1000;
     private static int readinessTries = 120;
 
@@ -114,20 +113,11 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
         log(Level.WARNING, computer, listener, message);
     }
 
-    protected String buildUpCommand(EC2Computer computer, String command) {
-        String remoteAdmin = computer.getRemoteAdmin();
-        if (remoteAdmin != null && !remoteAdmin.equals("Administrator")) {
-            command = computer.getRootCommandPrefix() + " " + command;
-        }
-        return command;
-    }
-
     @Override
     protected void launchScript(EC2Computer computer, TaskListener listener) throws IOException,
             AmazonClientException, InterruptedException {
         final Connection conn;
-        Connection cleanupConn = null; // java's code path analysis for final
-        // doesn't work that well.
+        Connection cleanupConn = null;
         boolean successful = false;
         PrintStream logger = listener.getLogger();
         EC2AbstractSlave node = computer.getNode();
@@ -171,13 +161,13 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
                     logInfo(computer, listener, "SSH service should have stabilized");
                 }
 
-                // connect fresh as ROOT
-                logInfo(computer, listener, "connect fresh as root");
+                // connect fresh as Administrator
+                logInfo(computer, listener, "connect fresh as Administrator");
                 cleanupConn = connectToSsh(computer, listener, template);
                 KeyPair key = computer.getCloud().getKeyPair();
                 if (key == null || !cleanupConn.authenticateWithPublicKey(computer.getRemoteAdmin(), key.getKeyMaterial().toCharArray(), "")) {
                     logWarning(computer, listener, "Authentication failed");
-                    return; // failed to connect as root.
+                    return; // failed to connect as Administrator.
                 }
             } else {
                 logWarning(computer, listener, "bootstrapresult failed");
@@ -187,10 +177,10 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
 
             SCPClient scp = conn.createSCPClient();
             String initScript = node.initScript;
-            String tmpDir = (Util.fixEmptyAndTrim(node.tmpDir) != null ? node.tmpDir : "\\tmp");
+            String tmpDir = (Util.fixEmptyAndTrim(node.tmpDir) != null ? node.tmpDir : "~/tmp");
 
             logInfo(computer, listener, "Creating tmp directory (" + tmpDir + ") if it does not exist");
-            conn.exec("mkdir -p " + tmpDir, logger);
+            conn.exec("New-Item -Type Directory -Path " + tmpDir, logger);
 
             if (initScript != null && initScript.trim().length() > 0
                     // TODO: double check if calling Test-Path will have the same effect as "test" on Linux.
@@ -200,7 +190,7 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
                 Session sess = conn.openSession();
                 sess.requestDumbPTY(); // so that the remote side bundles stdout
                 // and stderr
-                sess.execCommand(buildUpCommand(computer, "cmd /c " + tmpDir + "init.bat"));
+                sess.execCommand("cmd /c " + tmpDir + "init.bat");
 
                 sess.getStdin().close(); // nothing to write here
                 sess.getStderr().close(); // we are not supposed to get anything
@@ -220,7 +210,7 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
                 sess = conn.openSession();
                 sess.requestDumbPTY(); // so that the remote side bundles stdout
                 // and stderr
-                sess.execCommand(buildUpCommand(computer, "New-Item -ItemType File -Path ~/.jenkins-init"));
+                sess.execCommand("New-Item -ItemType File -Path ~/.jenkins-init");
 
                 sess.getStdin().close(); // nothing to write here
                 sess.getStderr().close(); // we are not supposed to get anything
@@ -290,19 +280,6 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
             if (cleanupConn != null && (!successful || template.isConnectBySSHProcess()))
                 cleanupConn.close();
         }
-    }
-
-    private boolean executeRemote(EC2Computer computer, Connection conn, String checkCommand,  String command, PrintStream logger, TaskListener listener)
-            throws IOException, InterruptedException {
-        logInfo(computer, listener,"Verifying: " + checkCommand);
-        if (conn.exec(checkCommand, logger) != 0) {
-            logInfo(computer, listener, "Installing: " + command);
-            if (conn.exec(command, logger) != 0) {
-                logWarning(computer, listener, "Failed to install: " + command);
-                return false;
-            }
-        }
-        return true;
     }
 
     private File createIdentityKeyFile(EC2Computer computer) throws IOException {
