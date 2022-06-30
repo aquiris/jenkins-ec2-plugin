@@ -177,11 +177,12 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
 
             SCPClient scp = conn.createSCPClient();
             String initScript = node.initScript;
-            String tmpDir = (Util.fixEmptyAndTrim(node.tmpDir) != null ? node.tmpDir : "~/tmp");
+            String tmpDir = (Util.fixEmptyAndTrim(node.tmpDir) != null ? node.tmpDir : "C:\\JenkinsLauncherTemp");
 
             logInfo(computer, listener, "Creating tmp directory (" + tmpDir + ") if it does not exist");
-            conn.exec("New-Item -Type Directory -Path " + tmpDir, logger);
+            conn.exec("New-Item -Force -Type Directory -Path " + tmpDir, logger);
 
+            // TODO The Test-Path and the creation of .jenkins-init are not aligned
             if (initScript != null && initScript.trim().length() > 0
                     // TODO: double check if calling Test-Path will have the same effect as "test" on Linux.
                     && conn.exec("Test-Path -Path .jenkins-init -PathType Leaf", logger) != 0) {
