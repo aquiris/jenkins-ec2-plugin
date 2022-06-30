@@ -235,7 +235,7 @@ public class EC2WinSSHLauncher extends EC2ComputerLauncher {
             final String suffix = computer.getSlaveCommandSuffix();
             final String remoteFS = node.getRemoteFS();
             final String workDir = Util.fixEmptyAndTrim(remoteFS) != null ? remoteFS : tmpDir;
-            String launchString = "Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList" + prefix + " java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "/remoting.jar -workDir " + workDir + suffix;
+            String launchString = prefix + " java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "/remoting.jar -workDir " + workDir + suffix;
             // launchString = launchString.trim();
 
             if (template.isConnectBySSHProcess()) {
